@@ -1,0 +1,53 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: nodes-redis
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "no"]
+    ports:
+      - "6380:6379"          # exposto pro seu PC (6379 ja pode estar ocupado por outro stack)
+    volumes:
+      - redisdata:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  monitor:
+    build: .
+    container_name: nodes-monitor
+    env_file: .env
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./data:/data:ro       # coloque aqui o seed (nodes_resultado.json / nodes_seed.txt)
+    restart: unless-stopped
+    # se 'updated_at' do meta:eth ficar > 5 min atrasado, marca unhealthy.
+    # Use junto com autoheal sidecar OU rode 'docker compose restart' manual.
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os,json,time,redis; r=redis.from_url(os.environ['REDIS_URL']); m=r.get('rpc:meta:eth'); assert m and (time.time()-json.loads(m)['updated_at'])<480\" || exit 1"]
+      interval: 120s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+
+  dashboard:
+    build: .
+    container_name: nodes-dashboard
+    command: ["python", "-u", "dashboard.py"]
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      PORT: "8080"
+    ports:
+      - "8080:8080"           # abra http://localhost:8080 no navegador
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  redisdata:

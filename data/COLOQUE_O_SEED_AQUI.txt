@@ -1,0 +1,9 @@
+Coloque aqui o arquivo com a lista de nodes pro monitor ler.
+
+Opcao A (melhor): copie  D:\nodes_resultado.json  pra esta pasta.
+   -> ja vem com chainId, o monitor comeca classificado mais rapido.
+
+Opcao B: copie  D:\nodes_unicos.txt  pra esta pasta e renomeie pra nodes_seed.txt
+   -> o monitor extrai os IP:porta sozinho e descobre a rede no ar.
+
+O docker-compose monta esta pasta como /data (somente leitura) dentro do container.
