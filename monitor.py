@@ -32,9 +32,7 @@ import aiohttp
 import websockets
 import redis.asyncio as aioredis
 
-# ---------------------------------------------------------------------------
 # Config (tudo via variavel de ambiente -> ver .env)
-# ---------------------------------------------------------------------------
 REDIS_URL       = os.getenv("REDIS_URL", "redis://redis:6379/0")
 NODES_FILE      = os.getenv("NODES_FILE", "/data/nodes_resultado.json")
 SEED_FALLBACK   = os.getenv("SEED_FALLBACK", "/data/nodes_seed.txt")
@@ -107,9 +105,7 @@ def registra(st, ok, lat=None):
         st["samples"].append((t, lat))
 
 
-# ---------------------------------------------------------------------------
 # Percentis (metodo nearest-rank, em cima das amostras cruas)
-# ---------------------------------------------------------------------------
 def percentil(ordenado, p):
     n = len(ordenado)
     if n == 0:
@@ -134,9 +130,7 @@ def estatisticas(amostras):
     }
 
 
-# ---------------------------------------------------------------------------
 # JSON-RPC helpers
-# ---------------------------------------------------------------------------
 def rpc_body(metodo, params=None, _id=1):
     return {"jsonrpc": "2.0", "id": _id, "method": metodo, "params": params or []}
 
@@ -148,10 +142,8 @@ async def http_call(session, url, metodo, params=None):
         return data.get("result")
 
 
-# ---------------------------------------------------------------------------
 # Deteccao de metadados (chainId, cliente, archive, ws, syncing, transporte)
 # roda de vez em quando (RECHECK_META), nao todo ciclo
-# ---------------------------------------------------------------------------
 async def detecta_http(session, ip, porta):
     url = f"http://{ip}:{porta}"
     try:
@@ -233,9 +225,7 @@ async def recheca_meta(session, st):
     st["last_meta"] = now()
 
 
-# ---------------------------------------------------------------------------
 # Probe de latencia (1 ciclo) -> adiciona SAMPLES_CYCLE amostras
-# ---------------------------------------------------------------------------
 async def probe_http(session, st):
     url = st["http_url"]
     for _ in range(SAMPLES_CYCLE):
@@ -290,9 +280,7 @@ async def probe_node(session, st, sem):
             await probe_ws(st)
 
 
-# ---------------------------------------------------------------------------
 # Publicacao no Redis
-# ---------------------------------------------------------------------------
 def success_rate(st):
     a = recentes(st["attempts"], RANK_WINDOW_SEC)
     return round(sum(a) / len(a), 3) if a else 0.0
@@ -397,9 +385,7 @@ async def publica(r, nodes):
     return resumo
 
 
-# ---------------------------------------------------------------------------
 # Carrega a lista inicial de nodes (json do teste OU txt de ip:porta)
-# ---------------------------------------------------------------------------
 def carrega_seed():
     pares = {}  # endpoint -> (ip, porta, chainId opcional)
 
@@ -441,7 +427,6 @@ def carrega_seed():
     return nodes
 
 
-# ---------------------------------------------------------------------------
 async def main():
     nodes = carrega_seed()
     if not nodes:
