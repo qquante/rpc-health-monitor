@@ -30,4 +30,4 @@ No live RPC endpoint was probed in this review. Endpoint availability and archiv
 
 ## License
 
-No open-source license has been granted. Redistribution terms remain to be defined.
+Project-authored source code is licensed under the [MIT License](LICENSE). Third-party components and datasets retain their respective rights and licenses.
