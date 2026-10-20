@@ -1,79 +1,42 @@
 # RPC Health Monitor
 
-**Measure endpoint health, chain coherence and latency for ranked selection.**
-
 ![Language: Python](https://img.shields.io/badge/Language-Python-3776AB?style=flat-square&logo=python) ![State: Redis](https://img.shields.io/badge/State-Redis-555555?style=flat-square) [![License: MIT](https://img.shields.io/badge/License-MIT-555555?style=flat-square)](LICENSE)
 
-[Overview](#overview) · [Quickstart](#quickstart) · [Example](#example) · [Validation](#validation) · [Documentation](#documentation)
+Measure RPC endpoint latency and chain coherence, then publish per-network rankings to Redis for downstream consumers.
 
-## Overview
+The monitor targets Ethereum, BSC and Base. It times `eth_blockNumber` probes, keeps raw timestamped samples in a sliding window and ranks eligible nodes by median latency with tail-latency tie-breaking.
 
-A read-only RPC endpoint monitor that measures latency and chain coherence and publishes ranked endpoints.
+## What “healthy” means here
 
-**Stack:** Python · aiohttp · websockets · Redis · Docker
-
-## Health is more than HTTP success
-
-| Component | Behavior |
-| --- | --- |
-| Identity | Probes compare chain identity and synchronization. |
-| Freshness | Block observations and coherence checks help identify lagging nodes. |
-| Ranking | Latency samples and health results feed Redis rankings and consumers. |
-
-## Processing path
+[monitor.py](monitor.py) evaluates more than HTTP success: success rate, block lag, syncing state and coherence with the network's observed height affect eligibility. Metadata checks distinguish client, transport and capabilities. Latency summaries include nearest-rank `p50`, `p90`, `p95` and `p99`, plus sample count/min/max/mean.
 
 ```mermaid
 flowchart LR
-  N0["Endpoint seed"]
-  N1["bounded RPC probes"]
-  N2["health and latency metrics"]
-  N3["Redis rankings"]
-  N4["dashboard/consumer"]
-N0 --> N1 --> N2 --> N3 --> N4
+  Seeds[Local node seeds] --> Probe[Timed RPC probes]
+  Probe --> Window[Raw sliding-window samples]
+  Window --> Gate{Health and coherence rules}
+  Gate -->|eligible| Ranking[Sort by p50 then p99]
+  Gate -->|ineligible| Retain[Keep failure observations]
+  Ranking --> Redis[(Redis consumer views)]
 ```
 
-## Quickstart
+## Redis output contract
 
-```console
-python -m venv .venv
-# Activate .venv, then:
-python -m pip install -r requirements.txt
-python -m py_compile monitor.py auditoria.py dashboard.py exemplo_consumo.py
-```
-
-The commands above install prerequisites or run the specified offline checks. Live collection, cloud operations, messaging and trading are separate operational steps when present.
-
-## Example
-
-**Inspect the workflow**
-
-Supply your own endpoint seed through `NODES_FILE`. Follow a probe into its health/latency sample and network ranking, then inspect the consumer example. A reachable endpoint is not automatically an archive provider or a working WebSocket endpoint.
-
-## Configuration and storage
-
-[.env.example](.env.example) documents Redis, probe cadence, concurrency, timeout, minimum samples, maximum lag and ranking windows. Candidate endpoints and Redis connectivity are external dependencies.
-
-## Repository guide
-
-| Location | Responsibility |
+| Key | Content |
 | --- | --- |
-| [monitor.py](monitor.py) | Probe and ranking loop |
-| [auditoria.py](auditoria.py) | RPC audit helpers |
-| [dashboard.py](dashboard.py) | Status interface |
-| [exemplo_consumo.py](exemplo_consumo.py) | Rank consumer example |
+| `rpc:rank:{net}` | Sorted set scored by median latency. |
+| `rpc:node:{net}:{endpoint}` | Detailed node/configuration JSON. |
+| `rpc:best:{net}` | Selected top endpoints. |
+| `rpc:meta:{net}` | Publication timestamp and healthy/total counts. |
 
-## Validation
+[exemplo_consumo.py](exemplo_consumo.py) shows the consumer side; [dashboard.py](dashboard.py) provides local inspection.
 
-The quickstart lists the declared checks. No passing CI or coverage claim is implied by the technology badges.
+## Operator inputs
 
-## Scope and operational boundaries
+`NODES_FILE` selects the seed file; `TARGET_NETS`, `PROBE_INTERVAL`, `CONCURRENCY`, `TIMEOUT`, `WINDOW`, `RANK_WINDOW_SEC`, `MIN_WINDOW_SEC`, `MIN_SUCCESS` and `MAX_LAG` control collection/ranking. `REDIS_URL` selects shared state. Review [.env.example](.env.example) and [docker-compose.yml](docker-compose.yml) before running the monitor.
 
-The syntax quickstart makes no RPC calls. Current endpoint availability, archive support and rate limits need live provider verification. A ranking is bounded by its sampling window and freshness.
+A local source check is `python -m py_compile monitor.py dashboard.py exemplo_consumo.py`; the runtime requires aiohttp, websockets and the Redis client declared by the project. No dedicated offline behavior suite is bundled. A high rank is a measurement under the configured workload/window, not a guarantee of archival coverage or transaction-delivery performance.
 
-## Documentation
+**Technology:** Python · aiohttp · websockets · Redis · Docker
 
-- The repository guide above links directly to the implementation and configuration files.
-
-## License and attribution
-
-Project-authored source code is licensed under the [MIT License](LICENSE). Third-party components and datasets retain their respective rights and licenses.
+Project-authored source: [MIT](LICENSE). Third-party components retain their own notices and terms.
