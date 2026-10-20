@@ -31,6 +31,12 @@ flowchart LR
 
 [exemplo_consumo.py](exemplo_consumo.py) shows the consumer side; [dashboard.py](dashboard.py) provides local inspection.
 
+## Node inventory privacy
+
+[data/nodes_resultado.json](data/nodes_resultado.json) contains exactly three **fictional examples**, using the documentation-only address blocks defined in [RFC 5737](https://www.rfc-editor.org/rfc/rfc5737.html). They are not working RPC providers or measured results.
+
+Keep real inventories under ignored `data/private/` and select them with `NODES_FILE` (for example `/data/private/nodes_resultado.json` inside the Compose container). Use `SEED_FALLBACK` for a separately configured private text seed. Never publish populated node inventories.
+
 ## Operator inputs
 
 `NODES_FILE` selects the seed file; `TARGET_NETS`, `PROBE_INTERVAL`, `CONCURRENCY`, `TIMEOUT`, `WINDOW`, `RANK_WINDOW_SEC`, `MIN_WINDOW_SEC`, `MIN_SUCCESS` and `MAX_LAG` control collection/ranking. `REDIS_URL` selects shared state. Review [.env.example](.env.example) and [docker-compose.yml](docker-compose.yml) before running the monitor.

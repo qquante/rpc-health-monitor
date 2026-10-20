@@ -54,3 +54,8 @@ storage_state*.json
 *.sqlite
 *.sqlite3
 *.db
+
+# Private RPC inventories
+data/private/
+data/nodes_seed.txt
+data/nodes_resultado.local.json
